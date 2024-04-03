@@ -259,6 +259,5 @@ if (root.$ && root.$.Deferred) {
     DU.config.useJQ = true;
 }
 DU.external = { Promise: root.Promise };
-if (!root.DeferredUtil) root.DeferredUtil = DU;
 export default DU;
 //});

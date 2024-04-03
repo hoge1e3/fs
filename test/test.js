@@ -1,12 +1,14 @@
 /* global requirejs */
 import romk_f from "./ROM_k.js";
 const timeout = (t) => new Promise(s => setTimeout(s, t));
-requirejs(["../dist/FS_amd"], function (FS) {
-    console.log(FS.default);
-    main(FS.default);
-});
-//requirejs(["FS","../test/ROM_k","WorkerRevProxy","FSRevProxy"],
-//function (FS,romk,WRP,FSRevProxy) {
+if (window.FS) {
+    window.addEventListener("load",()=>main(window.FS));
+} else {
+    requirejs(["../dist/FS_amd"], function (FS) {
+        console.log(FS);
+        main(FS);
+    });    
+}
 function initConsole() {
     let header=document.querySelector("#header");
     let con=document.querySelector("#console");

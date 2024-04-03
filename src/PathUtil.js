@@ -192,6 +192,4 @@ PathUtil={
 
 PathUtil.isAbsolute=PathUtil.isAbsolutePath;
 PathUtil.isRelative=PathUtil.isRelativePath;
-if (typeof window=="object") window.PathUtil=PathUtil;
 export default PathUtil;
-//});
