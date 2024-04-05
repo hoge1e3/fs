@@ -1,5 +1,5 @@
 /* global requirejs */
-import romk_f from "./ROM_k.js";
+import romk_f from "./ROM_k.mjs";
 const _root=(function (){
     if (typeof window!=="undefined") return window;
     if (typeof self!=="undefined") return self;
@@ -87,7 +87,9 @@ try {
         } catch(e) {
             console.error(e);
         }
-        var nfsp = P.rel( P.directorify( process.cwd()) , "test/fixture/");// "C:/bin/Dropbox/workspace/fsjs/fs/";//P.rel(PathUtil.directorify(process.cwd()), "fs/");
+        //console.log("import.meta.url",import.meta.url);
+
+        var nfsp = P.rel( P.directorify( process.cwd()) , "fixture/");// "C:/bin/Dropbox/workspace/fsjs/fs/";//P.rel(PathUtil.directorify(process.cwd()), "fs/");
         console.log(nfsp);
         var nfso;
         rootFS.mount("/fs/", nfso = new NativeFS(nfsp));
