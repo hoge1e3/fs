@@ -1,32 +1,23 @@
 /* global requirejs */
 import romk_f from "./ROM_k.js";
+const _root=(function (){
+    if (typeof window!=="undefined") return window;
+    if (typeof self!=="undefined") return self;
+    if (typeof global!=="undefined") return global;
+    return (function (){return this;})();
+})();
 const timeout = (t) => new Promise(s => setTimeout(s, t));
-if (window.FS) {
-    window.addEventListener("load",()=>main(window.FS));
-} else {
-    requirejs(["../dist/FS_amd"], function (FS) {
-        console.log(FS);
-        main(FS);
-    });    
+if (typeof alert!=="function") {
+    _root.alert=function (x) {
+        console.log("ALERT",x);
+    };
 }
-function initConsole() {
-    let header=document.querySelector("#header");
-    let con=document.querySelector("#console");
-    function c(k) {
-        let old=console[k];
-        console[k]=function (...args) {
-            old.apply(console, args);
-            const text=document.createElement("div");
-            header.innerText=text.innerText=args.map(s=>s+"").join(" ");
-            con.appendChild(text);
-        };
-    }
-    for (let k of ["error","info","warn","log"]) c(k);
-}
-initConsole();
-async function main(FS){
+export async function main(FS){
+
 let pass;
 let testf;
+let window=_root;
+let rootFS;
 try {
     var assert = FS.assert;
     //assert.is(arguments,
@@ -41,7 +32,6 @@ try {
         Content = assert(FS.Content),
         DU = assert(FS.DeferredUtil);
     const romk=romk_f(FS);
-    var rootFS = window.rfs = new RootFS(new LSFS(localStorage));
     window.onerror = function (a,b,c,d,e) {
         console.log("window.onerror",arguments);
         console.error(e);
@@ -51,13 +41,21 @@ try {
         //if (e.preventDefault) e.preventDefault();
         return false;
     };
-
     window.PathUtil = P;
     window.romk = romk;
+    if (typeof localStorage==="undefined") {
+        rootFS = new RootFS(LSFS.ramDisk());
+        rootFS.get("/ram/").mkdir();
+        rootFS.get("/ram/comp.zip");
+    } else {
+        rootFS = new RootFS(new LSFS(localStorage));
+        rootFS.mount("/ram/", LSFS.ramDisk());
+    }
     rootFS.mount("/rom/", romk);
-    rootFS.mount("/ram/", LSFS.ramDisk());
     rootFS.mount("http://127.0.0.1:8080/", new WebFS());
     rootFS.get("/var/").mkdir();
+    window.rfs = rootFS;
+    FS.init(rootFS);
     // check cannot mount which is already exists (別にできてもいいじゃん)
     /*assert.ensureError(function (){
         rootFS.mount("/var/",romk);
@@ -81,10 +79,15 @@ try {
     assert(!P.isChildOf("c:\\hoge/fuga\\piyo//", "c:\\hoge\\fugo/"), "!isChildOf");
     testContent();
     var nfs;
+    assert(typeof process==="undefined" || NativeFS.available, "Native FS not avail in node");
     if (NativeFS.available) {
         /*global require*/
-        require('nw.gui').Window.get().showDevTools();
-        var nfsp = "C:/bin/Dropbox/workspace/fsjs/fs/";//P.rel(PathUtil.directorify(process.cwd()), "fs/");
+        try {
+            require('nw.gui').Window.get().showDevTools();
+        } catch(e) {
+            console.error(e);
+        }
+        var nfsp = P.rel( P.directorify( process.cwd()) , "test/fixture/");// "C:/bin/Dropbox/workspace/fsjs/fs/";//P.rel(PathUtil.directorify(process.cwd()), "fs/");
         console.log(nfsp);
         var nfso;
         rootFS.mount("/fs/", nfso = new NativeFS(nfsp));
@@ -106,7 +109,7 @@ try {
     if (!testf.exists()) {
         pass=1;
         console.log("Test #", pass);
-        testWebFS();
+        testWebFS(rootFS);
         testd = cd = cd.rel(/*Math.random()*/"testdir" + "/");
         console.log("Enter", cd);
         testd.mkdir();
@@ -184,7 +187,9 @@ try {
             nfs.rel("test.txt").text(ABCD);
             var pngurl = nfs.rel("Tonyu/Projects/MapTest/images/park.png").text();
             assert(P.startsWith(pngurl, "data:"));
-            document.getElementById("img").src = pngurl;
+            if (typeof document!=="undefined") {
+                document.getElementById("img").src = pngurl;
+            }
             nfs.rel("sub/test.png").text(pngurl);
 
             nfs.rel("sub/test.png").copyTo(testd.rel("test.png"));
@@ -206,41 +211,7 @@ try {
         testd.rel("test.txt").text(ABCD);
         //testEach(testd);
         //--- the big file
-        var cap = LSFS.getCapacity();
-        console.log("usage", cap);
-        if (cap.max < 100000000) {
-            var len = cap.max - cap.using + 1500;
-            var buf = "a";
-            while (buf.length < len) buf += buf;
-            var bigDir = testd.rel("bigDir/");
-            var bigDir2 = bigDir.sibling("bigDir2/");
-            if (bigDir2.exists()) bigDir2.rm({ r: 1 });
-            var bigFile = bigDir.rel("theBigFile.txt");
-            assert.ensureError(function () {
-                console.log("Try to create the BIG ", buf.length, "bytes file");
-                return bigFile.text(buf);
-            });
-            assert(!bigFile.exists(), "BIG file remains...?");
-            buf = buf.substring(0, cap.max - cap.using - 1500);
-            buf = buf.substring(0, buf.length / 10);
-            for (var i = 0; i < 6; i++) bigDir.rel("test" + i + ".txt").text(buf);
-            await bigDir.moveTo(bigDir2).then(
-                function () { alert("You cannot come here(move big)"); },
-                function (e) {
-                    console.log("Failed Successfully! (move big!)", e);
-                    return DU.resolve();
-                }
-            ).then(function () {
-                for (var i = 0; i < 6; i++) assert(bigDir.rel("test" + i + ".txt").exists());
-                assert(!bigDir2.exists(), "Bigdir2 (" + bigDir2.path() + ") remains");
-                console.log("Bigdir removing");
-                bigDir.removeWithoutTrash({ recursive: true });
-                bigDir2.removeWithoutTrash({ recursive: true });
-                assert(!bigDir.exists());
-                console.log("Bigdir removed!");
-                return DU.resolve();
-            });//.then(DU.NOP, DU.E);
-        }
+        if (typeof localStorage!=="undefined") await chkBigFile(testd);
 
         //------------------
         if (!nfs) {
@@ -259,7 +230,7 @@ try {
             if (i == 2) res = i.c.d;
             return i;
             //});
-        }).fail(function (e) { console.log("DU.ERR", (e + "").replace(/\n.*/, "")); });
+        }).catch(function (e) { console.log("DU.ERR", (e + "").replace(/\n.*/, "")); });
         DU.each({ a: 1, b: 2, c: 3 }, function (k, v) {
             return DU.timeout(500).then(function () {
                 console.log("DU.EACH t/o", k, v);
@@ -267,7 +238,7 @@ try {
                 if (v == 2) res = v.c.d;
                 return v;
             });
-        }).fail(function (e) { console.log("DU.ERR", (e + "").replace(/\n.*/, "")); });
+        }).catch(function (e) { console.log("DU.ERR", (e + "").replace(/\n.*/, "")); });
         await DU.all([DU.timeout(500, "A"), DU.timeout(200, "B")]).then(function (r) {
             if (r.join(",") !== "A,B") alert(r.join(","));
             console.log("DU.all1", r);
@@ -345,7 +316,7 @@ try {
             testd.rel("test.txt").rm();
             chkRecur(testd, {}, "sub/test2.txt");
             console.log("FULLL", testd.path());
-            console.log("FULLL", localStorage[testd.path()]);
+            //console.log("FULLL", localStorage[testd.path()]);
             chkRecur(testd, { includeTrashed: true }, "test.txt,sub/test2.txt");
             testd.rel("test.txt").rm({ noTrash: true });
             chkRecur(testd, {}, "sub/test2.txt");
@@ -383,7 +354,7 @@ try {
     console.log("#"+pass+" test passed. ");
     if (pass==1) {
         await timeout(1000);
-        location.reload();
+        if (typeof location!=="undefined") location.reload();
     } else {
         console.log("All test passed.");
     }
@@ -396,7 +367,43 @@ try {
         console.error(e);
     }
 }
-
+async function chkBigFile(testd) {
+    var cap = LSFS.getCapacity();
+    console.log("usage", cap);
+    if (cap.max < 100000000) {
+        var len = cap.max - cap.using + 1500;
+        var buf = "a";
+        while (buf.length < len) buf += buf;
+        var bigDir = testd.rel("bigDir/");
+        var bigDir2 = bigDir.sibling("bigDir2/");
+        if (bigDir2.exists()) bigDir2.rm({ r: 1 });
+        var bigFile = bigDir.rel("theBigFile.txt");
+        assert.ensureError(function () {
+            console.log("Try to create the BIG ", buf.length, "bytes file");
+            return bigFile.text(buf);
+        });
+        assert(!bigFile.exists(), "BIG file remains...?");
+        buf = buf.substring(0, cap.max - cap.using - 1500);
+        buf = buf.substring(0, buf.length / 10);
+        for (var i = 0; i < 6; i++) bigDir.rel("test" + i + ".txt").text(buf);
+        await bigDir.moveTo(bigDir2).then(
+            function () { alert("You cannot come here(move big)"); },
+            function (e) {
+                console.log("Failed Successfully! (move big!)", e);
+                return DU.resolve();
+            }
+        ).then(function () {
+            for (var i = 0; i < 6; i++) assert(bigDir.rel("test" + i + ".txt").exists());
+            assert(!bigDir2.exists(), "Bigdir2 (" + bigDir2.path() + ") remains");
+            console.log("Bigdir removing");
+            bigDir.removeWithoutTrash({ recursive: true });
+            bigDir2.removeWithoutTrash({ recursive: true });
+            assert(!bigDir.exists());
+            console.log("Bigdir removed!");
+            return DU.resolve();
+        });//.then(DU.NOP, DU.E);
+    }
+}
 function chkCpy(f) {
     var tmp = f.up().rel("tmp_" + f.name());
     f.copyTo(tmp);
@@ -422,7 +429,11 @@ function chkCpy(f) {
 
     // bin->bin
     var b = f.getBytes();
+    //console.log("f.getBytes",b);
     tmp.setBytes(b);
+    //console.log("tmp.getBytes",tmp.getBytes());
+    //console.log(peekStorage(f));
+    //console.log(peekStorage(tmp));
     checkSame(f, tmp);
     tmp.text("DUMMY");
 
@@ -442,9 +453,13 @@ function chkCpy(f) {
 
     tmp.removeWithoutTrash();
 }
+function peekStorage(f) {
+    return rootFS.resolveFS(f.path()).storage[f.path()];
+}
 function checkSame(a, b) {
-    console.log("check same", a.name(), b.name(), a.text().length);
-    assert(a.text() == b.text(), "text is not match: " + a + "," + b);
+    console.log("check same", a.name(), b.name(), a.text().length, b.text().length);
+    assert(a.text() == b.text(), ()=>"text is not match: " + a + "!=" + b+"\n"+
+    "content ----\n"+a.text()+"\n----\n"+b.text());
     var a1 = a.getBytes({ binType: ArrayBuffer });
     var b1 = b.getBytes({ binType: ArrayBuffer });
     a1 = new Uint8Array(a1);
@@ -454,8 +469,18 @@ function checkSame(a, b) {
     assert(a1.length == b1.length, "length is not match: " + a + "," + b);
     for (var i = 0; i < a1.length; i++) assert(a1[i] == b1[i], "failed at [" + i + "]");
 }
+function contEq(a,b) {
+    if (typeof a!==typeof b)return false;
+    if (typeof a==="string") return a===b;
+    a = new Uint8Array(a);
+    b = new Uint8Array(b);
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i]!==b[i]) return false;
+    return true;
+}
 //window.DataURL=Content.DataURL;
 function chkrom() {
+    if (typeof localStorage==="undefined") return;
     var p = JSON.parse(localStorage["/"]);
     if ("rom/" in p) {
         delete p["rom/"];
@@ -498,9 +523,37 @@ function chkRecur(dir, options, result) {
     assert.eq(Object.keys(t).join(","), result);
 }
 function testContent() {
-    var s = "てすとabc";
     var C = Content;
-    var c1 = C.plainText(s);
+    const a=[0xe3, 0x81, 0xa6, 0xe3, 0x81, 0x99, 0xe3, 0x81, 0xa8, 0x61, 0x62, 0x63];
+    const conts={
+        p:["てすとabc", (s)=>C.plainText(s), (c)=>c.toPlainText()],
+        u:["data:text/plain;base64,44Gm44GZ44GoYWJj", (u)=>C.url(u), (c)=>c.toURL()],
+        a:[Uint8Array.from(a).buffer, (a)=>C.bin(a, "text/plain"), (c)=>c.toArrayBuffer()],
+    };
+    if (typeof Buffer!=="undefined") {
+        conts.n=[Buffer.from(a),(n)=>C.bin(n, "text/plain"), (c)=>c.toNodeBuffer()];
+    }
+    const SRC=0, TOCONT=1, FROMCONT=2;
+    let binLen=conts.a[SRC].byteLength;
+    for (let tfrom of Object.keys(conts) ) 
+        for (let tto of Object.keys(conts) ) chk(tfrom,tto);
+    function chk(tfrom,tto) {
+        const src=conts[tfrom][SRC];
+        const c=conts[tfrom][TOCONT](src);
+        if (c.hasNodeBuffer()) {
+            assert.eq(c.nodeBuffer.length, binLen,"Bin length not match");
+        }
+        const dst=conts[tto][FROMCONT](c);
+        console.log("Convert Content ",tfrom,"->",tto);
+        assert(contEq(dst, conts[tto][SRC]), ()=>{
+            console.log("Actual: ",dst);
+            console.log("Expected: ",conts[tto][SRC]);
+            console.log("Content bufType ", c.bufType );
+            throw new Error(`Fail at ${tfrom} to ${tto}`);
+        });
+    }
+
+    /*var c1 = C.plainText(s);
     test(c1, [s]);
 
     function test(c, path) {
@@ -508,20 +561,23 @@ function testContent() {
         var u = c.toURL();
         var a = c.toArrayBuffer();
         var n = C.hasNodeBuffer() && c.toNodeBuffer();
-        console.log(path, "->", p, u, a, n);
-        var c1 = C.plainText(p);
-        var c2 = C.url(u);
-        var c3 = C.bin(a, "text/plain");
-        var c4 = n && C.bin(n, "text/plain");
+        console.log("TestCont", path, "->", p, u, a, n);
+        var cp = C.plainText(p);
+        var cu = C.url(u);
+        var ca = C.bin(a, "text/plain");
+        var cn = n && C.bin(n, "text/plain");
         if (path.length < 2) {
-            test(c1, path.concat([p]));
-            test(c2, path.concat([u]));
-            test(c3, path.concat([a]));
-            if (n) test(c4, path.concat([n]));
+            test(cp, path.concat([p]));
+            test(cu, path.concat([u]));
+            test(ca, path.concat([a]));
+            if (n) test(cn, path.concat([n]));
+        } else {
+            //assert.eq(cp,p, "cp!=p");
+            //assert.eq(cu,u, "cu!=u");
         }
-    }
+    }*/
 }
-function testWebFS() {
+function testWebFS(rootFS) {
     rootFS.get("http://127.0.0.1:8080/test/browser.html").text(function (r) {
         console.log("WSF", r);
         assert(r.indexOf("test/test") >= 0, "WebFS get fail");
@@ -599,3 +655,4 @@ async function checkZip(dir) {
     }
 }
 }// of main()
+_root.main=main;

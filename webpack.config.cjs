@@ -2,7 +2,8 @@ const path=require('path');
 
 module.exports = [
     {
-        entry: './src/index.js',
+        entry: './src/index_browser.js',
+        //resolve: {fallback : { fs: false }},
         output: {
             library: "FS",
             libraryTarget: 'umd',
@@ -11,7 +12,8 @@ module.exports = [
         },
     },
     {
-        entry: './src/index.js',
+        entry: './src/index_browser.js',
+        //resolve: {fallback : { fs: false }},
         output: {
             libraryTarget: 'amd',
             path: path.resolve(__dirname, "dist"),

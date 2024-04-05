@@ -7,8 +7,8 @@ import Util from "./Util.js";
 import Content from "./Content.js";
 import A from "./assert.js";
 const extend = Util.extend;
-var assert = A, fs;
-const requireTries = [
+var assert = A;//, fs;
+/*const requireTries = [
     ()=>require("fs"), 
     ()=>requirejs.nodeRequire("fs"), 
     ()=>global.require("fs")
@@ -19,10 +19,11 @@ for (let fsf of requireTries) {
         fs.existsSync('test.txt');
         process.cwd();// fails here in NW.js Worker( fs is OK, process is absent)
         break;
-    } catch (e) { fs = null; }
-}
+    } catch (e) { console.log("FS.ERR", e);fs = null; }
+}*/
+export default function factory(fs){
 var NativeFS = function (rootPoint) {
-    if (!fs) {
+    if (fs.dummy) {
         throw new Error("This system not support native FS");
     }
     if (rootPoint) {
@@ -31,7 +32,7 @@ var NativeFS = function (rootPoint) {
     }
 };
 var hasDriveLetter = typeof process!=="undefined" && P.hasDriveLetter(process.cwd());
-NativeFS.available = !!fs;
+NativeFS.available = !fs.dummy;
 var SEP = P.SEP;
 //var json=JSON; // JSON changes when page changes, if this is node module, JSON is original JSON
 var Pro = NativeFS.prototype = new FS();
@@ -234,5 +235,6 @@ FS.delegateMethods(NativeFS.prototype, {
         };
     }
 });
-export default NativeFS;
+return NativeFS;
+}
 

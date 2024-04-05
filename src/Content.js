@@ -47,6 +47,9 @@ Content.bin=function (bin, contentType) {
         // in node.js v8.9.1 ,
         ///  bin is Buffer, bin.buffer is ArrayBuffer
         //   and bin.buffer is content of different file(memory leak?) 
+        // ^　Not a memory leak.　https://nodejs.org/docs/v20.11.1/api/buffer.html#buffer
+        //   bin.buffer points shared memory and the data can be got 
+        //   using bin.byteOffset, bin.length
         b.bufType="array1";
         b.arrayBuffer=bin.buffer;
     } else {
@@ -303,6 +306,11 @@ var DataURL = function (data, contentType) {
         this.url = data;
         this.binType = contentType || A;
         this.dataURL2bin(data);
+    } else if (Content.isNodeBuffer(data)) {
+        this.buffer = data;
+        assert.is(contentType, String);
+        this.contentType = contentType;
+        this.bin2dataURL(this.buffer, this.contentType);
     } else if (data && Content.isBuffer(data.buffer)) {
         this.buffer = data.buffer;
         assert.is(contentType, String);

@@ -6,7 +6,8 @@
   "scripts": {
     "build-dev": "npx webpack --mode=development",
     "build": "npx webpack --mode=production",
-    "test-browser": "npx http-server -o test/browser.html"
+    "test-browser": "npx http-server -o test/browser.html",
+    "test-node": "node test/test_node.js"
   },
   "type": "module",
   "author": "",

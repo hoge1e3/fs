@@ -11,8 +11,8 @@ import _LSFS from "./LSFS.js";
 import P from "./PathUtil.js";
 import _WebFS from "./WebFS.js";
 import _zip from "./zip.js";
-import * as fs from "fs";
-//import * as fs from "./maybe_fs.cjs";
+//import * as fs from "fs";
+import * as fs from "./maybe_fs.cjs";
 export let assert = A;
 export let Content = _Content;
 export let Class = FSClass;
@@ -99,7 +99,7 @@ export let init = function (fs) {
             fs = LSFS.ramDisk();
         }
     }
-    rootFS = (fs instanceof RootFS? fs : new RootFS(fs));
+    rootFS = fs instanceof RootFS? fs: new RootFS(fs);
 };
 export let getRootFS = function () {
     init();

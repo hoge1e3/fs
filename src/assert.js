@@ -181,12 +181,14 @@ assert.and=function () {
     });
 };
 function flatten(a) {
-    if (a instanceof Array) {
+    if (Array.isArray(a)) {
         var res=[];
         a.forEach(function (e) {
             res=res.concat(flatten(e));
         });
         return res;
+    } else if (typeof a==="function") {
+        return flatten(a());
     }
     return [a];
 }

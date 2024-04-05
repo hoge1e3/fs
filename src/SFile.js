@@ -518,6 +518,11 @@ SFile.prototype={
     setBlob: function (blob) {
         var t=this;
         return DU.promise(function (succ/*,err*/) {
+            if (typeof blob.arrayBuffer==="function"){
+                return blob.arrayBuffer().then((a)=>{
+                    succ(t.setBytes(a));
+                });
+            }
             var reader = new FileReader();
             reader.addEventListener("loadend", function() {
                 // reader.result contains the contents of blob as a typed array

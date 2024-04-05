@@ -1,5 +1,5 @@
 {
-    "esversion":8,"undef": true,"unused": false,
+    "esversion":11,"undef": true,"unused": false,
     "jquery":true,"node": true,"devel" : true,
     "browser": true,
     "predef": []
