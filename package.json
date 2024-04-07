@@ -11,6 +11,7 @@
   "type": "module",
   "author": "hoge1e3",
   "license": "MIT",
+  "repository": "https://github.com/hoge1e3/fs",
   "dependencies": {
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1"
