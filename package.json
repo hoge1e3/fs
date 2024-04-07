@@ -1,7 +1,7 @@
 {
   "name": "@hoge1e3/fs",
   "version": "1.0.0",
-  "description": "File System in browser using localStorage.",
+  "description": "File system in browser using localStorage.",
   "main": "./src/index.js",
   "scripts": {
     "build-dev": "npx webpack --mode=development",
@@ -11,7 +11,7 @@
     "test-nw": "node test/test_nw.js"
   },
   "type": "module",
-  "author": "",
+  "author": "hoge1e3",
   "license": "MIT",
   "dependencies": {
     "file-saver": "^2.0.5",
