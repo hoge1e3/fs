@@ -12,8 +12,28 @@ if (typeof alert!=="function") {
         console.log("ALERT",x);
     };
 }
+function checkModuleExports(FS) {
+    const keys=new Set();
+    for (let k in FS) {
+        if (k==="default") continue;
+        keys.add(k);
+    }
+    for (let k in FS.default) {
+        if (k==="default") continue;
+        keys.add(k);
+    }
+    console.log("exported names:",keys);
+    const undefs=[];
+    for (let k of keys) {
+        if (FS[k]!==FS.default[k]) undefs.push(k);
+    }
+    if (undefs.length) {
+        console.log("Add props:", undefs.join(","));
+        throw new Error("Missing exported name");
+    }
+}
 export async function main(FS){
-
+checkModuleExports(FS);
 let pass;
 let testf;
 let window=_root;

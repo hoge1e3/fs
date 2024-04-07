@@ -11,8 +11,9 @@ import _LSFS from "./LSFS.js";
 import P from "./PathUtil.js";
 import _WebFS from "./WebFS.js";
 import _zip from "./zip.js";
-import * as fs from "fs";
-//import * as fs from "./maybe_fs.cjs";
+//import * as fs from "fs";
+import fs from "./maybe_fs.cjs";
+//console.log("imported", fs);
 export let assert = A;
 export let Content = _Content;
 export let Class = FSClass;
@@ -66,10 +67,10 @@ export let localStorageAvailable = function () {
 export let init = function (fs) {
     if (rootFS) return;
     if (!fs) {
-        if (NativeFS.available) {
-            fs = new NativeFS();
-        } else if (localStorageAvailable()) {
-            fs = new LSFS(localStorage);
+        if (FS.NativeFS.available) {
+            fs = new FS.NativeFS();
+        } else if (FS.localStorageAvailable()) {
+            fs = new FS.LSFS(localStorage);
         } else if (typeof importScripts === "function") {
             // Worker
             /* global self*/
@@ -80,56 +81,62 @@ export let init = function (fs) {
                 }
                 switch (data.type) {
                     case "upload":
-                        get(data.base).importFromObject(data.data);
+                        FS.get(data.base).importFromObject(data.data);
                         break;
                     case "observe":
                         rootFS.observe(data.path, function (path, meta) {
                             self.postMessage(JSON.stringify({
                                 type: "changed",
                                 path: path,
-                                content: get(path).text(),
+                                content: FS.get(path).text(),
                                 meta: meta
                             }));
                         });
                         break;
                 }
             });
-            fs = LSFS.ramDisk();
+            fs = FS.LSFS.ramDisk();
         } else {
-            fs = LSFS.ramDisk();
+            fs = FS.LSFS.ramDisk();
         }
     }
-    rootFS = (fs instanceof RootFS? fs : new RootFS(fs));
+    rootFS = (fs instanceof FS.RootFS? fs : new FS.RootFS(fs));
 };
 export let getRootFS = function () {
-    init();
+    FS.init();
     return rootFS;
 };
 export let get = function () {
-    init();
+    FS.init();
     return rootFS.get.apply(rootFS, arguments);
 };
 export let expandPath = function () {
     return env.expandPath.apply(env, arguments);
 };
 export let resolve = function (path, base) {
-    init();
-    if (SFile.is(path)) return path;
+    FS.init();
+    if (FS.SFile.is(path)) return path;
     path = env.expandPath(path);
     if (base && !P.isAbsolutePath(path)) {
         base = env.expandPath(base);
-        return get(base).rel(path);
+        return FS.get(base).rel(path);
     }
-    return get(path);
+    return FS.get(path);
 };
 export let mount = function () {
-    init();
+    FS.init();
     return rootFS.mount.apply(rootFS, arguments);
 };
 export let unmount = function () {
-    init();
+    FS.init();
     return rootFS.unmount.apply(rootFS, arguments);
 };
 export let isFile = function (f) {
-    return SFile.is(f);
+    return FS.SFile.is(f);
 };
+let FS={assert,Content,Class,DeferredUtil,Env,LSFS,NativeFS,
+    PathUtil,RootFS,SFile,WebFS,zip,addFSType,availFSTypes,setEnvProvider,getEnvProvider,
+    setEnv,getEnv,localStorageAvailable,init,getRootFS,get,expandPath,resolve,
+    mount,unmount,isFile};
+FS.default=FS;
+export {FS as default};
