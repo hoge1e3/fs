@@ -5,7 +5,7 @@
   "main": "./src/index.js",
   "scripts": {
     "build-dev": "npx webpack --mode=development",
-    "build": "npx webpack --mode=production",
+    "build": "npx webpack --mode=production && node build/addBrace.js",
     "test-browser": "npx http-server -o test/browser.html",
     "test-node": "node test/test_node.mjs",
     "test-nw": "node test/test_nw.js"
