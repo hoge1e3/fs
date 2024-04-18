@@ -4,16 +4,12 @@ import FSClass from "./FSClass.js";
 import DU from "./DeferredUtil.js";
 import PR from "./promise.js";
 import _Env from "./Env.js";
-import NativeFSFactory from "./NativeFS.js";
 import _SFile from "./SFile.js";
 import _RootFS from "./RootFS.js";
 import _LSFS from "./LSFS.js";
 import P from "./PathUtil.js";
 import _WebFS from "./WebFS.js";
 import _zip from "./zip.js";
-//import * as fs from "fs";
-import fs from "./maybe_fs.cjs";
-//console.log("imported", fs);
 export let assert = A;
 export let Content = _Content;
 export let Class = FSClass;
@@ -23,7 +19,7 @@ if (!DU.config.useJQ) {
 }
 export let Env = _Env;
 export let LSFS = _LSFS;
-export let NativeFS = NativeFSFactory(fs);
+export let NativeFS = {available:false};
 export let PathUtil = P;
 export let RootFS = _RootFS;
 export let SFile = _SFile;

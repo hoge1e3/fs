@@ -5,14 +5,13 @@
   "main": "./src/index.js",
   "scripts": {
     "build-dev": "npx webpack --mode=development",
-    "build": "npx webpack --mode=production && node build/addBrace.js",
-    "test-browser": "npx http-server -o test/browser.html",
-    "test-node": "node test/test_node.mjs",
-    "test-nw": "node test/test_nw.js"
+    "build": "npx webpack --mode=production",
+    "test": "npx http-server -o test/browser.html"
   },
   "type": "module",
   "author": "hoge1e3",
   "license": "MIT",
+  "repository": "https://github.com/hoge1e3/fs",
   "readmeFile": "README.md",
   "dependencies": {
     "file-saver": "^2.0.5",
