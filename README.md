@@ -11,14 +11,15 @@ npm run build
 ## Test
 
 ```
-npm run test-browser
+npm run test
 ```
 
 Wait until "All test Passed." is shown in browser.
 
 ### Example
-FS.get method returns a File Object which can access to localStorage
+`FS.get` method returns a File Object which can access to localStorage.
 
+(See ./example.html)
 ```
 <script src="path/to/FS.js"></script>
 <script>
