@@ -1,6 +1,6 @@
 {
   "name": "@hoge1e3/fs",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "File system in browser using localStorage.",
   "main": "./src/index.js",
   "scripts": {
@@ -20,5 +20,8 @@
   "devDependencies": {
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4"
-  }
+  },
+  "keywords": [
+    "file","filesystem","browser","localStorage"
+  ]
 }

@@ -79,7 +79,7 @@ p.toBin = function (binType) {
             return this.arrayBuffer;
         } else {
             this.nodeBuffer=( Content.arrayBuffer2Buffer(this.arrayBuffer) );
-            return this.arrayBuffer;
+            return this.nodeBuffer;
         }
     } else if (this.url) {
         var d=new DataURL(this.url, binType);
