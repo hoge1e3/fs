@@ -88,7 +88,9 @@ zip.unzip = async function (arrayBuf, destDir, options) {
         if (options.progress) {
             await options.progress(dest);
         }
-        console.log("Inflating", zipEntry.name, zipEntry);
+        if (options.v) {
+            console.log("Inflating", zipEntry.name, zipEntry);
+        }
         if (dest.isDir()) continue;
         const s = {
             file: dest,
