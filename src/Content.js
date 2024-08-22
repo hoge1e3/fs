@@ -28,7 +28,7 @@ Content.buffer2ArrayBuffer = function (a) {
 };
 Content.arrayBuffer2Buffer= function (a) {
     if (a instanceof ArrayBuffer) {
-        var b=new Buffer(new Uint8Array(a));
+        var b=Buffer.from(new Uint8Array(a));
         return b;
     }
     return assert(a,"a2n: a is not set");
@@ -295,7 +295,7 @@ Content.str2utf8bytes=function (str, binType) {
             i+=m[0].length-1;
         } else a.push(e.charCodeAt(i));
     }
-    return (typeof Buffer!="undefined" && binType===Buffer ? new Buffer(a) : new Uint8Array(a).buffer);
+    return (typeof Buffer!="undefined" && binType===Buffer ? Buffer.from(a) : new Uint8Array(a).buffer);
 };
 //-------- DataURL
 var A = Content.hasNodeBuffer() ? Buffer : ArrayBuffer;
