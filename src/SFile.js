@@ -141,7 +141,13 @@ SFile.prototype={
     setMetaInfo: function (info, options) {
         return this.act.fs.setMetaInfo(this.act.path,info, options);
     },
-    getDirTree: function (options) {
+    getDirTree: function (options={}) {
+        if (typeof options.excludes==="function") {
+            const origf=options.excludes;
+            options={...options};
+            options.excludes=({...original})=>
+                origf(this.rel(original.relPath), {...original});            
+        }
         return this.act.fs.getDirTree(this.act.path, options);
     },
     assertExists: function () {

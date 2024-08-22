@@ -280,8 +280,30 @@ FS.delegateMethods(FS.prototype, {
         options = options || {};
         var dest = options.dest = options.dest || {};
         options.style = options.style || "flat-absolute";
-        options.excludes = options.excludes || [];
-        assert.is(options.excludes, Array);
+        let excludesFunc=options.excludes;
+        if (typeof options.excludes==="function") {
+            excludesFunc=options.excludes;
+        } else {
+            const excludesAry = options.excludes || [];
+            assert.is(excludesAry, Array);
+            const defaultExcludes=({fullPath, relPath, ...options})=>{
+                switch (options.style) {
+                    case "flat-relative":
+                    case "hierarchical":
+                        if (excludesAry.indexOf(relPath) >= 0) {
+                            return true;
+                        }
+                        break;
+                    case "flat-absolute":
+                        if (excludesAry.indexOf(fullPath) >= 0) {
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            };
+            excludesFunc=defaultExcludes;
+        }
         if (!options.base) {
             options.base = path;
         }
@@ -289,44 +311,32 @@ FS.delegateMethods(FS.prototype, {
         var tr = this.opendirEx(path, options);
         if (options.style == "no-recursive") return tr;
         var t = this;
-        for (var f in tr) {
-            var meta = tr[f];
-            var p = P.rel(path, f);
-            var relP = P.relPath(p, options.base);
-            switch (options.style) {
-                case "flat-relative":
-                case "hierarchical":
-                    if (options.excludes.indexOf(relP) >= 0) {
-                        continue;
-                    }
-                    break;
-                case "flat-absolute":
-                    if (options.excludes.indexOf(p) >= 0) {
-                        continue;
-                    }
-                    break;
-            }
-            if (t.isDir(p)) {
+        for (let fname in tr) {
+            var meta = tr[fname];
+            const fullPath = P.rel(path, fname);
+            const relPath = P.relPath(fullPath, options.base);
+            if (excludesFunc({fullPath, relPath,  ...options})) continue;
+            if (t.isDir(fullPath)) {
                 switch (options.style) {
                     case "flat-absolute":
                     case "flat-relative":
-                        t.getDirTree(p, options);
+                        t.getDirTree(fullPath, options);
                         break;
                     case "hierarchical":
                         options.dest = {};
-                        dest[f] = t.getDirTree(p, options);
+                        dest[fname] = t.getDirTree(fullPath, options);
                         break;
                 }
             } else {
                 switch (options.style) {
                     case "flat-absolute":
-                        dest[p] = meta;
+                        dest[fullPath] = meta;
                         break;
                     case "flat-relative":
-                        dest[relP] = meta;
+                        dest[relPath] = meta;
                         break;
                     case "hierarchical":
-                        dest[f] = meta;
+                        dest[fname] = meta;
                         break;
                 }
             }

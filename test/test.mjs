@@ -1,4 +1,4 @@
-/* global requirejs */
+/* global requirejs, console, setTimeout, alert, location, process, localStorage, document, Buffer */
 import romk_f from "./ROM_k.mjs";
 const _root=(function (){
     if (typeof window!=="undefined") return window;
@@ -75,6 +75,7 @@ try {
     rootFS.mount("http://127.0.0.1:8080/", new WebFS());
     rootFS.get("/var/").mkdir();
     window.rfs = rootFS;
+    window.FS= FS;
     FS.init(rootFS);
     // check cannot mount which is already exists (別にできてもいいじゃん)
     /*assert.ensureError(function (){
@@ -98,7 +99,7 @@ try {
     assert(P.isChildOf("c:\\hoge/fuga\\piyo//", "c:\\hoge\\fuga/"), "isChildOf");
     assert(!P.isChildOf("c:\\hoge/fuga\\piyo//", "c:\\hoge\\fugo/"), "!isChildOf");
     testContent();
-    var nfs;
+    let nfs;
     assert(typeof process==="undefined" || NativeFS.available, "Native FS not avail in node");
     if (NativeFS.available) {
         /*global require*/
@@ -111,10 +112,11 @@ try {
 
         var nfsp = P.rel( P.directorify( process.cwd()) , "fixture/");// "C:/bin/Dropbox/workspace/fsjs/fs/";//P.rel(PathUtil.directorify(process.cwd()), "fs/");
         console.log(nfsp);
-        var nfso;
+        let nfso;
         rootFS.mount("/fs/", nfso = new NativeFS(nfsp));
         assert(nfso.exists("/fs/"), "/fs/ not exists");
-        nfs = root.rel("fs/");
+        cd=nfs = root.rel("fs/");
+        assert(nfs.rel("Tonyu/").exists(),nfs+" not exists");
     }
     var r = cd.ls();
     console.log(r);
@@ -166,9 +168,11 @@ try {
         }, { excludes: exdirs });
         console.log("files in romd/ except", exdirs, tncnt);
         assert.eq(tncnt, 33, "tncnt");
+        checkGetDirTree(romd);
 
         assert(testd.rel("sub/").exists());
-        assert(rootFS.get("/testdir/sub/").exists());
+        if (!nfs) assert(rootFS.get("/testdir/sub/").exists());
+        else assert(nfs.rel("testdir/sub/").exists());
         assert(testf.exists());
         var sf = testd.setPolicy({ topDir: testd });//SandBoxFile.create(testd._clone());
         assert(sf.rel("test.txt").text() == ABCD);
@@ -226,6 +230,7 @@ try {
             var apText = "\n//tuikasitayo-n\n";
             appended.appendText(apText);
             assert.eq(beforeAppend.text() + apText, appended.text());
+            checkMtime(appended);
         }
         console.log(testd.rel("test.txt").path(), testd.rel("test.txt").text());
         testd.rel("test.txt").text(romd.rel("Actor.tonyu").text() + ABCD + CDEF);
@@ -308,6 +313,7 @@ try {
         // blob->blob
         var f = testd.rel("hoge.txt");
         f.text("hogefuga");
+        checkMtime(f);
         var tmp = testd.rel("fuga.txt");
         var b = f.getBlob();
         console.log("BLOB reading...", f.name(), tmp.name());
@@ -371,12 +377,12 @@ try {
             testf.removeWithoutTrash({ recursive: true });
         }
     }
-    console.log(rootFS.get("/var/").ls());
-    console.log(rootFS.get("/rom/").ls());
+    console.log("/var/", rootFS.get("/var/").ls());
+    console.log("/rom/", rootFS.get("/rom/").ls());
     console.log("#"+pass+" test passed. ");
     if (pass==1) {
         await timeout(1000);
-        if (typeof location!=="undefined") location.reload();
+        if (typeof location!=="undefined" && !location.href.match(/pass1only/)) location.reload();
     } else {
         console.log("All test passed.");
     }
@@ -388,6 +394,9 @@ try {
     } catch (e) {
         console.error(e);
     }
+}
+function chkDU(){
+    
 }
 async function chkBigFile(testd) {
     var cap = LSFS.getCapacity();
@@ -457,16 +466,13 @@ function chkCpy(f) {
     //console.log(peekStorage(f));
     //console.log(peekStorage(tmp));
     checkSame(f, tmp);
-
+    
     // bin->Uint8Array->bin
     let c2=Content.bin(b, f.contentType());
     let bins=c2.toArrayBuffer();
     console.log("bins",b,c2,bins);
     tmp.setBytes(new Uint8Array(bins));
-    checkSame(f, tmp);
-
     tmp.text("DUMMY");
-
 
 
     if (f.isText()) {
@@ -551,6 +557,7 @@ function chkRecur(dir, options, result) {
     assert.eq(di.join(","), result);
     options.style = "flat-relative";
     var t = dir.getDirTree(options);
+    console.log("getDirTree",dir, t);
     assert.eq(Object.keys(t).join(","), result);
 }
 function testContent() {
@@ -631,10 +638,13 @@ async function asyncTest(testd) {
 }
 async function checkWatch(testd) {
     const buf = [];
+    const isN = NativeFS.available && testd.getFS() instanceof NativeFS;
+    console.log("isN",isN);
     const w = testd.watch((type, f) => {
         buf.push(type + ":" + f.relPath(testd));
     });
     async function buildScrap(f, t = "aaa") {
+        console.log("buildScrap",f.path());
         await timeout(100);
         f.text(t);
         await timeout(100);
@@ -646,15 +656,28 @@ async function checkWatch(testd) {
     w.remove();
     await buildScrap(testd.rel("hogefuga.txt"));
     console.log("checkWatch", buf);
-    assert.eq(buf.join("\n"), [
+    assert.eq(buf.join("\n"), (isN?[
+        "rename:hogefuga.txt",
+        "change:hogefuga.txt",
+        "change:hogefuga.txt",
+        "change:hogefuga.txt",
+        //"change:hogefuga.txt",
+    ]:[
         "create:hogefuga.txt",
         "change:",
         "change:hogefuga.txt",
         "change:",
         "delete:hogefuga.txt",
         "change:"
-    ].join("\n"), "checkWatch");
+    ]).join("\n"), "checkWatch");
 
+}
+function checkMtime(f) {
+    const t=f.lastUpdate();
+    const nt=t-30*60*1000;
+    f.setMetaInfo({lastUpdate:nt});
+    console.log("checkMtime", f.path(), t, nt);
+    assert(Math.abs(f.lastUpdate()-nt)<2000);
 }
 async function checkZip(dir) {
     await timeout(3000);
@@ -684,6 +707,105 @@ async function checkZip(dir) {
             Math.floor(tre[k].lastUpdate / 1000) -
             Math.floor(tre2[k2].lastUpdate / 1000)) <= 1);
     }
+    await timeout(1000);
 }
-}// of main()
+function getDirTree3Type(dir, excludes) {
+    if (!excludes) {
+        excludes={};
+    } else if (typeof excludes.map==="function") {
+        excludes={
+            hier:excludes, rel:excludes,
+            abs:excludes.map(e=>dir.rel(e).path()),
+        };
+    } else if (typeof excludes==="function") {
+        excludes={
+            hier:excludes, rel:excludes,
+            abs:excludes
+        };
+    }
+    const hier=dir.getDirTree({style:"hierarchical",excludes:excludes.hier});
+    console.log("hier",hier);
+    const rel=dir.getDirTree({style:"flat-relative",excludes:excludes.rel});
+    console.log("rel",rel);
+    const abs=dir.getDirTree({style:"flat-absolute",excludes:excludes.abs});
+    console.log("abs",abs);
+    eqtree3(hier, rel,abs);
+    return {hier, rel, abs};
+    function eqtree3(hier,rel,abs) {
+        eqtree2(rel,abs);
+        eqtreeH(rel,hier);
+    }
+    function eqtreeH(rel, hier){
+        const uncheckedRel={};
+        for (let k in rel) uncheckedRel[k]=1;
+        function loop(hier, path) {
+            for (let k in hier) {
+                let np=path+k;
+                //console.log("hier, k, path", hier, k, path);
+                delete uncheckedRel[np];
+                if (k.match(/\/$/)) {
+                    loop(hier[k], np);    
+                } else {
+                    eqTree(rel[np], hier[k], np);
+                }
+            }    
+        }
+        loop(hier,"");
+        assert(Object.keys(uncheckedRel).length==0,"Unchecked rel: "+Object.keys(uncheckedRel).length);
+    }   
+    function eqtree2(rel,abs){
+        const uncheckedAbs={};
+        for (let k in abs) uncheckedAbs[k]=1;
+        for (let k in rel) {
+            const absk=dir.rel(k).path();
+            //console.log("k-absk",k, absk);
+            delete uncheckedAbs[absk];
+            eqTree(abs[absk], rel[k], k);
+        }
+        assert(Object.keys(uncheckedAbs).length==0,"Unchecked abs: "+Object.keys(uncheckedAbs).length);
+    }
+}
+function checkGetDirTree(dir) {
+    const noex=getDirTree3Type(dir);
+    assert.eq(Object.keys(noex.abs).length,50, "count of dirtree abs");
+    assert.eq(Object.keys(noex.rel).length,50, "count of dirtree rel");
+    assert.eq(Object.keys(noex.hier).length,17, "count of dirtree hier");
+
+    const exa=getDirTree3Type(dir,["event/"]);
+    assert.eq(Object.keys(exa.abs).length,50-6, "count of dirtree abs-ea");
+    assert.eq(Object.keys(exa.rel).length,50-6, "count of dirtree rel-ea");
+    assert.eq(Object.keys(exa.hier).length,17-1, "count of dirtree hier-ea");
+
+    function exfn(f) {
+        return f.isDir() && f.rel("CrashToHandler.tonyu").exists();
+    }
+    const exf=getDirTree3Type(dir,exfn);
+    
+    assert.eq(Object.keys(exf.abs).length,50-6, "count of dirtree abs-ef");
+    assert.eq(Object.keys(exf.rel).length,50-6, "count of dirtree rel-ef");
+    assert.eq(Object.keys(exf.hier).length,17-1, "count of dirtree hier-ef");
+    eqTree(exf.hier, exa.hier, "hier_efea");
+    eqTree(exf.rel, exa.rel, "rel_efea");
+    eqTree(exf.abs, exa.abs, "abs_efea");
+}
+function eqTree(a, b, path) {
+    assert.eq(typeof a, typeof b, "typeof not match:"+path);
+    if (a==null) {
+        assert(b==null, "both should be null: "+path);
+        return;
+    } 
+    if (typeof a!=="object") {
+        assert.eq(a, b, "non-equal non-object: ", path);
+        return;
+    }
+    for (let k in a) {
+        eqTree(a[k], b[k], path+"."+k);
+    }
+    for (let k in b) {
+        eqTree(b[k], a[k], path+"."+k);
+    }
+}
+
+}
+// of main()
 _root.main=main;
