@@ -200,7 +200,7 @@ SFile.prototype={
     removeWithoutTrash: function (options) {
         options=options||{};
         options.noTrash=true;
-        this.rm(options);
+        return this.rm(options);
     },
     isDir: function () {
         return this.act.fs.isDir(this.act.path);

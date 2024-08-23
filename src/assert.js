@@ -114,7 +114,19 @@ Assertion.prototype={
                 assert(e+""===err,action+" thrown an error "+e+" but expected:"+err);
             }
             console.log("Error thrown successfully: ",e.message);
-            return;
+            return e;
+        }
+        this.fail(action,"should throw an error",err);
+    },
+    async ensureErrorAsync(action, err) {
+        try {
+            await action();
+        } catch(e) {
+            if(typeof err=="string") {
+                assert(e+""===err,action+" thrown an error "+e+" but expected:"+err);
+            }
+            console.log("Error thrown successfully: ",e.message);
+            return e;
         }
         this.fail(action,"should throw an error",err);
     },
@@ -156,6 +168,14 @@ var assert=function () {
         }
     };
 });
+assert.ensureErrorAsync=async function (){
+    try {
+        return await top.ensureErrorAsync.apply(top,arguments);
+    } catch(e) {
+        console.log(e.stack);
+        throw new Error(e.message);
+    }
+};
 assert.fail=top.fail.bind(top);
 assert.MODE_STRICT=top.MODE_STRICT;
 assert.MODE_DEFENSIVE=top.MODE_DEFENSIVE;

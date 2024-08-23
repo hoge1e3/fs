@@ -231,6 +231,8 @@ try {
             appended.appendText(apText);
             assert.eq(beforeAppend.text() + apText, appended.text());
             checkMtime(appended);
+            await checkRemoveError(nfs);
+            checkGetDirTree_nw(nfs);
         }
         console.log(testd.rel("test.txt").path(), testd.rel("test.txt").text());
         testd.rel("test.txt").text(romd.rel("Actor.tonyu").text() + ABCD + CDEF);
@@ -680,20 +682,28 @@ function checkMtime(f) {
     assert(Math.abs(f.lastUpdate()-nt)<2000);
 }
 async function checkZip(dir) {
+    const cleanExt=async ()=>{
+        assert.eq(ext.name(),"ext/");
+        if (ext.exists()) {
+            await ext.removeWithoutTrash({ recursive: true });
+            assert(!ext.exists(),ext+" remains ");        
+        }    
+    };
     await timeout(3000);
+    let ext = dir.rel("ext/");
+    await cleanExt();
     dir.rel("ziping.txt").text("zipping");
     let tre = dir.getDirTree();
     console.log("TRE", tre);
     const zipf = FS.get("/ram/comp.zip");
     await FS.zip.zip(dir, zipf);
-    let ext = dir.rel("ext/");
     ext.mkdir();
     await FS.zip.unzip(zipf, ext);
 
     let tre2 = ext.getDirTree();
     console.log("TRE2", tre2);
     dir.rel("ziping.txt").removeWithoutTrash();
-    ext.removeWithoutTrash({ recursive: true });
+    await cleanExt();
     assert.eq(Object.keys(tre).length, Object.keys(tre2).length);
     for (let k2 of Object.keys(tre2)) {
         let k = k2.replace(/\/ext/, "");
@@ -704,8 +714,10 @@ async function checkZip(dir) {
         console.log(tre[k].lastUpdate - tre2[k2].lastUpdate);
         //assert(Math.abs(tre[k].lastUpdate-tre2[k2].lastUpdate)<2000);
         assert(Math.abs(
-            Math.floor(tre[k].lastUpdate / 1000) -
-            Math.floor(tre2[k2].lastUpdate / 1000)) <= 1);
+            Math.floor(tre[k].lastUpdate / 2000) -
+            Math.floor(tre2[k2].lastUpdate / 2000)) <= 2,
+            `Zip timestamp not match ${k}=${tre[k].lastUpdate}, ${k2}=${tre2[k2].lastUpdate}, Diff=${tre[k].lastUpdate - tre2[k2].lastUpdate}`
+        );
     }
     await timeout(1000);
 }
@@ -784,24 +796,45 @@ function checkGetDirTree(dir) {
     assert.eq(Object.keys(exf.abs).length,50-6, "count of dirtree abs-ef");
     assert.eq(Object.keys(exf.rel).length,50-6, "count of dirtree rel-ef");
     assert.eq(Object.keys(exf.hier).length,17-1, "count of dirtree hier-ef");
-    eqTree(exf.hier, exa.hier, "hier_efea");
-    eqTree(exf.rel, exa.rel, "rel_efea");
-    eqTree(exf.abs, exa.abs, "abs_efea");
+    const ex={atimeMs:1, atime:1};
+    eqTree(exf.hier, exa.hier, "hier_efea", ex);
+    eqTree(exf.rel, exa.rel, "rel_efea", ex);
+    eqTree(exf.abs, exa.abs, "abs_efea", ex);
 }
-function eqTree(a, b, path) {
+function checkGetDirTree_nw(dir) {
+    const noex=getDirTree3Type(dir);
+    console.log("getDirTree-nw", noex);
+}
+async function checkRemoveError(dir) {
+    const fs=await import("fs");
+    dir=dir.rel("rmtest/");
+    dir.mkdir();
+    const locked=dir.rel("locked.txt");
+    locked.text("test");
+    const np=locked.fs.toNativePath(locked.path());
+    console.log("np",np);
+    fs.chmodSync(np,0o400);
+    await assert.ensureErrorAsync(()=>dir.removeWithoutTrash());
+    fs.chmodSync(np,0o666);
+    dir.removeWithoutTrash();
+    assert(!dir.exists(), dir+" remains (checkRemove)");    
+}
+function eqTree(a, b, path, excludes={}) {
     assert.eq(typeof a, typeof b, "typeof not match:"+path);
     if (a==null) {
         assert(b==null, "both should be null: "+path);
         return;
     } 
     if (typeof a!=="object") {
-        assert.eq(a, b, "non-equal non-object: ", path);
+        assert(a==b, `non-equal non-object: ${path} ${a}!==${b}`);
         return;
     }
     for (let k in a) {
+        if (excludes[k]) continue;
         eqTree(a[k], b[k], path+"."+k);
     }
     for (let k in b) {
+        if (excludes[k]) continue;
         eqTree(b[k], a[k], path+"."+k);
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@hoge1e3/fs",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "File system in browser using localStorage.",
   "main": "./src/index.js",
   "scripts": {
