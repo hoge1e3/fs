@@ -162,8 +162,13 @@ Content.Base64_To_ArrayBuffer=function (base64,binType){
     var n = 0;
     var b = 0;
     var e;
-
-    if(!num) return (new A(0));
+    const genBuf=(len)=>{
+        if (typeof Buffer!=="undefined" && A===Buffer) {
+            return Buffer.alloc(len);
+        } 
+        return new A(len);
+    };
+    if(!num) return genBuf(0);
     //if(num < 4) return null;
     //if(num % 4) return null;
 
@@ -177,7 +182,7 @@ Content.Base64_To_ArrayBuffer=function (base64,binType){
     if(base64.charAt(num - 1) == '=') e -= 1;
     if(base64.charAt(num - 2) == '=') e -= 1;
 
-    var ary_buffer = new A( e );
+    var ary_buffer = genBuf(e);
     var ary_u8 = (Content.isNodeBuffer(ary_buffer) ? ary_buffer : new Uint8Array( ary_buffer ));//new Uint8Array( ary_buffer );
     var i = 0;
     var p = 0;
