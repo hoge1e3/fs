@@ -490,7 +490,7 @@ function chkCpy(f) {
 
 
 
-    tmp.removeWithoutTrash();
+    tmp.removeWithoutTrash({recursive:true});
 }
 function peekStorage(f) {
     return rootFS.resolveFS(f.path()).storage[f.path()];
@@ -814,9 +814,9 @@ async function checkRemoveError(dir) {
     const np=locked.fs.toNativePath(locked.path());
     console.log("np",np);
     fs.chmodSync(np,0o400);
-    await assert.ensureErrorAsync(()=>dir.removeWithoutTrash());
+    await assert.ensureErrorAsync(()=>dir.rm({r:true}));
     fs.chmodSync(np,0o666);
-    dir.removeWithoutTrash();
+    await dir.rm({r:true});
     assert(!dir.exists(), dir+" remains (checkRemove)");    
 }
 function eqTree(a, b, path, excludes={}) {
