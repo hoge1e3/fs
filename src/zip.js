@@ -50,6 +50,9 @@ zip.zip = function (dir, dstZip, options) {
     }).then(function (content) {
         //console.log("zip.con",content);
         if (SFile.is(dstZip)) {
+            if (dstZip.isDir()) {
+                throw new Error(`zip: destination zip file ${dstZip.path()} is a directory.`);
+            }
             return dstZip.setBytes(content);
         } else {
             saveAs(
