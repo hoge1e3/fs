@@ -5,7 +5,7 @@ declare module "@hoge1e3/fs" {
         url(url:string):FileContent;
         bin(bin:ContentBuffer):FileContent;
     }
-    export class PathUtil {
+    export type TPathUtil={
         SEP: "/"|"\\";
 
         isChildOf(child:string, parent:string):boolean;
@@ -117,10 +117,11 @@ declare module "@hoge1e3/fs" {
         addFSType(name:string, fsgen:FSGenerator):void;
         availFSTypes():{[key:string]:FSGenerator};
         getRootFS():RootFS;
-        PathUtil: PathUtil;
+        PathUtil: TPathUtil;
         FileSystem: FileSystem;
         
     };
+    export const PathUtil: TPathUtil;
     export function getRootFS():RootFS;
     export default def;
     export const get:SFileGetter;
